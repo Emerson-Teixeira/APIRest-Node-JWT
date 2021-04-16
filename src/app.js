@@ -7,9 +7,9 @@ const app = express()
 
 app.use(express.json())
 app.use(morgan('dev'))
-app.use('/dishes',require('./routes/dishes'))
-app.use('/promotions',require('./routes/promotions'))
-app.use('/leaders',require('./routes/leaders'))
+app.use('/dishes',require('./routes/dishRouter'))
+app.use('/promotions',require('./routes/promoRouter'))
+app.use('/leaders',require('./routes/leaderRouter'))
 
 
 app.listen(PORT,hostname,()=>

@@ -1,14 +1,32 @@
 const router = require('express').Router();
+const Dishes = require('../models/dishes')
 
 // no ID
 router.get('/',(req,res)=>{
-    res.send('Will send all the dishes to you!');
+    Dishes.find({})
+    .then((dishes) =>{
+        res.status(200).json(dishes)
+    }).catch((err) =>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.post('/',(req,res)=>{
-    res.send('Will add the dish: ' + req.body.name + ' with details: ' + req.body.description);
+    Dishes.create(req.body)
+    .then((dish)=>{
+        res.status(200).json(dish)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.delete('/',(req,res)=>{
-    res.send('Deleting all dishes');
+    Dishes.remove({})
+    .then((rsp)=>{
+        res.status(200).json(rsp)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.put('/',(req,res)=>{
     res.status(403).send('PUT operation not supported on /dishes');
@@ -17,7 +35,12 @@ router.put('/',(req,res)=>{
 // with ID
 
 router.get('/:dishId',(req,res)=>{
-    res.send('Will send details of the dish: ' + req.params.dishId +' to you!');
+    Dishes.findById(req.params.dishId)
+    .then((dishes) =>{
+        res.status(200).json(dishes)
+    }).catch((err) =>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 router.post('/:dishId',(req,res)=>{
@@ -25,12 +48,23 @@ router.post('/:dishId',(req,res)=>{
 })
 
 router.delete('/:dishId',(req,res)=>{
-    res.end('Deleting dish: ' + req.params.dishId);
+    Dishes.findByIdAndRemove(req.params.dishId)
+    .then((rsp)=>{
+        res.status(200).json(rsp)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 router.put('/:dishId',(req,res)=>{
-    res.send('Updating the dish: ' + req.params.dishId + '\n' + 'Will update the dish: ' + req.body.name +
-        ' with details: ' + req.body.description);
+    Dishes.findByIdAndUpdate(req.params.dishId,{$set: req.body},{new:true})
+    .then((dish)=>{
+        res.status(200).json(dish)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 module.exports = router

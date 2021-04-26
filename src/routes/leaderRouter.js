@@ -1,14 +1,32 @@
 const router = require('express').Router();
-
+const Leaders = require('../models/leaderModel')
 // no ID
+
 router.get('/',(req,res)=>{
-    res.send('Will send all the leaders to you!');
+    Leaders.find({})
+    .then((leaders) =>{
+        res.status(200).json(leaders)
+    }).catch((err) =>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.post('/',(req,res)=>{
-    res.send('Will add the leader: ' + req.body.name + ' with details: ' + req.body.description);
+    Leaders.create(req.body)
+    .then((leader)=>{
+        res.status(200).json(leader)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.delete('/',(req,res)=>{
-    res.send('Deleting all leaders');
+    Leaders.remove({})
+    .then((rsp)=>{
+        res.status(200).json(rsp)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.put('/',(req,res)=>{
     res.status(403).send('PUT operation not supported on /leaders');
@@ -17,7 +35,12 @@ router.put('/',(req,res)=>{
 // with ID
 
 router.get('/:leaderId',(req,res)=>{
-    res.send('Will send details of the leader: ' + req.params.leaderId +' to you!');
+    Leaders.findById(req.params.leaderId)
+    .then((leaders) =>{
+        res.status(200).json(leaders)
+    }).catch((err) =>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 router.post('/:leaderId',(req,res)=>{
@@ -25,12 +48,23 @@ router.post('/:leaderId',(req,res)=>{
 })
 
 router.delete('/:leaderId',(req,res)=>{
-    res.end('Deleting leader: ' + req.params.leaderId);
+    Leaders.findByIdAndRemove(req.params.leaderId)
+    .then((rsp)=>{
+        res.status(200).json(rsp)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 router.put('/:leaderId',(req,res)=>{
-    res.send('Updating the leader: ' + req.params.leaderId + '\n' + 'Will update the leader: ' + req.body.name +
-        ' with details: ' + req.body.description);
+    Leaders.findByIdAndUpdate(req.params.leaderId,{$set: req.body},{new:true})
+    .then((leader)=>{
+        res.status(200).json(leader)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 module.exports = router

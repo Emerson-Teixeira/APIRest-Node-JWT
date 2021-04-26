@@ -1,14 +1,32 @@
 const router = require('express').Router();
+const Promotions = require('../models/promotionsModel')
 
 // no ID
 router.get('/',(req,res)=>{
-    res.send('Will send all the promotions to you!');
+    Promotions.find({})
+    .then((promotions) =>{
+        res.status(200).json(promotions)
+    }).catch((err) =>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.post('/',(req,res)=>{
-    res.send('Will add the promotion: ' + req.body.name + ' with details: ' + req.body.description);
+    Promotions.create(req.body)
+    .then((promotion)=>{
+        res.status(200).json(promotion)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.delete('/',(req,res)=>{
-    res.send('Deleting all promotions');
+    Promotions.remove({})
+    .then((rsp)=>{
+        res.status(200).json(rsp)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 router.put('/',(req,res)=>{
     res.status(403).send('PUT operation not supported on /promotions');
@@ -17,7 +35,12 @@ router.put('/',(req,res)=>{
 // with ID
 
 router.get('/:promoId',(req,res)=>{
-    res.send('Will send details of the promotion: ' + req.params.promoId +' to you!');
+    Promotions.findById(req.params.promoId)
+    .then((promotions) =>{
+        res.status(200).json(promotions)
+    }).catch((err) =>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 router.post('/:promoId',(req,res)=>{
@@ -25,12 +48,23 @@ router.post('/:promoId',(req,res)=>{
 })
 
 router.delete('/:promoId',(req,res)=>{
-    res.end('Deleting promotion: ' + req.params.promoId);
+    Promotions.findByIdAndRemove(req.params.promoId)
+    .then((rsp)=>{
+        res.status(200).json(rsp)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 router.put('/:promoId',(req,res)=>{
-    res.send('Updating the promotion: ' + req.params.promoId + '\n' + 'Will update the promotion: ' + req.body.name +
-        ' with details: ' + req.body.description);
+    Promotions.findByIdAndUpdate(req.params.promoId,{$set: req.body},{new:true})
+    .then((promotion)=>{
+        res.status(200).json(promotion)
+    })
+    .catch((err)=>{
+        res.status(500).json({msg: 'Error',err})
+    })
 })
 
 module.exports = router

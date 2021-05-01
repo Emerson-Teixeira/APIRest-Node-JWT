@@ -1,5 +1,8 @@
 const express = require('express')
 const morgan = require('morgan')
+const cookieParser = require('cookie-parser')
+const session = require('express-session')
+const fileStore = require('session-file-store')(session)
 const PORT = 3000
 const hostname = 'localhost'
 const mongoose = require('mongoose')
@@ -13,22 +16,42 @@ connect.then((db)=>{
 
 
 app.use(express.json())
+app.use(express.urlencoded({extended: true}))
+app.use(session({
+    name: 'SessId',
+    secret:'signKey',
+    saveUninitialized: false,
+    resave: false,
+    store: new fileStore()
+}))
 app.use(morgan('dev'))
 
 function auth(req,res,next){
-    var authHeader = req.headers.authorization
-    if(!authHeader){
-        res.setHeader('WWW-Authenticate','Basic')
-        return res.status(401).json({msg:'You didn\'t pass credentials, please fix your header and try again'})
-    }
+    if(!req.session.user){
+        var authHeader = req.headers.authorization
+        if(!authHeader){
+            res.setHeader('WWW-Authenticate','Basic')
+            return res.status(401).json({msg:'You didn\'t pass credentials, please fix your header and try again'})
+        }
 
-    var auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':')
-    if(auth[0] === 'admin' && auth[1] === 'password'){
-        next()
+        var auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':')
+        if(auth[0] === 'admin' && auth[1] === 'password'){
+            req.session.user = auth[0]
+            next()
+        }
+        else{
+            res.setHeader('WWW-Authenticate','Basic')
+            return res.status(401).json({msg:'Wrong credentials! Try again'})
+        }
     }
     else{
-        res.setHeader('WWW-Authenticate','Basic')
-        return res.status(401).json({msg:'Wrong credentials! Try again'})
+        if(req.session.user == 'admin'){
+            next()
+        }
+        else{
+            res.setHeader('WWW-Authenticate','Basic')
+            return res.status(401).json({msg:'Wrong credentials! Try again'})
+        }
     }
 }
 

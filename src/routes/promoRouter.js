@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const Promotions = require('../models/promotionsModel')
+const authenticate = require('../authenticate')
 
 // no ID
 router.get('/',(req,res)=>{
@@ -10,7 +11,7 @@ router.get('/',(req,res)=>{
         res.status(500).json({msg: 'Error',err})
     })
 })
-router.post('/',(req,res)=>{
+router.post('/',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Promotions.create(req.body)
     .then((promotion)=>{
         res.status(200).json(promotion)
@@ -19,7 +20,7 @@ router.post('/',(req,res)=>{
         res.status(500).json({msg: 'Error',err})
     })
 })
-router.delete('/',(req,res)=>{
+router.delete('/',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Promotions.remove({})
     .then((rsp)=>{
         res.status(200).json(rsp)
@@ -43,11 +44,11 @@ router.get('/:promoId',(req,res)=>{
     })
 })
 
-router.post('/:promoId',(req,res)=>{
+router.post('/:promoId',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     res.status(403).send('POST operation not supported on /promotions/'+ req.params.promoId);
 })
 
-router.delete('/:promoId',(req,res)=>{
+router.delete('/:promoId',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Promotions.findByIdAndRemove(req.params.promoId)
     .then((rsp)=>{
         res.status(200).json(rsp)
@@ -57,7 +58,7 @@ router.delete('/:promoId',(req,res)=>{
     })
 })
 
-router.put('/:promoId',(req,res)=>{
+router.put('/:promoId',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Promotions.findByIdAndUpdate(req.params.promoId,{$set: req.body},{new:true})
     .then((promotion)=>{
         res.status(200).json(promotion)

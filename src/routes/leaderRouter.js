@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const Leaders = require('../models/leaderModel')
+const authenticate = require('../authenticate')
 // no ID
 
 router.get('/',(req,res)=>{
@@ -10,7 +11,7 @@ router.get('/',(req,res)=>{
         res.status(500).json({msg: 'Error',err})
     })
 })
-router.post('/',(req,res)=>{
+router.post('/',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Leaders.create(req.body)
     .then((leader)=>{
         res.status(200).json(leader)
@@ -19,7 +20,7 @@ router.post('/',(req,res)=>{
         res.status(500).json({msg: 'Error',err})
     })
 })
-router.delete('/',(req,res)=>{
+router.delete('/',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Leaders.remove({})
     .then((rsp)=>{
         res.status(200).json(rsp)
@@ -47,7 +48,7 @@ router.post('/:leaderId',(req,res)=>{
     res.status(403).send('POST operation not supported on /leaders/'+ req.params.leaderId);
 })
 
-router.delete('/:leaderId',(req,res)=>{
+router.delete('/:leaderId',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Leaders.findByIdAndRemove(req.params.leaderId)
     .then((rsp)=>{
         res.status(200).json(rsp)
@@ -57,7 +58,7 @@ router.delete('/:leaderId',(req,res)=>{
     })
 })
 
-router.put('/:leaderId',(req,res)=>{
+router.put('/:leaderId',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Leaders.findByIdAndUpdate(req.params.leaderId,{$set: req.body},{new:true})
     .then((leader)=>{
         res.status(200).json(leader)

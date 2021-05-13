@@ -1,16 +1,18 @@
 const router = require('express').Router();
 const Dishes = require('../models/dishes')
-
+const authenticate = require('../authenticate');
 // no ID
 router.get('/',(req,res)=>{
     Dishes.find({})
+    .populate('comments.author')
     .then((dishes) =>{
         res.status(200).json(dishes)
     }).catch((err) =>{
         res.status(500).json({msg: 'Error',err})
     })
 })
-router.post('/',(req,res)=>{
+
+router.post('/',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Dishes.create(req.body)
     .then((dish)=>{
         res.status(200).json(dish)
@@ -19,7 +21,8 @@ router.post('/',(req,res)=>{
         res.status(500).json({msg: 'Error',err})
     })
 })
-router.delete('/',(req,res)=>{
+
+router.delete('/',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Dishes.remove({})
     .then((rsp)=>{
         res.status(200).json(rsp)
@@ -28,6 +31,7 @@ router.delete('/',(req,res)=>{
         res.status(500).json({msg: 'Error',err})
     })
 })
+
 router.put('/',(req,res)=>{
     res.status(403).send('PUT operation not supported on /dishes');
 })
@@ -36,6 +40,7 @@ router.put('/',(req,res)=>{
 
 router.get('/:dishId',(req,res)=>{
     Dishes.findById(req.params.dishId)
+    .populate('comments.author')
     .then((dishes) =>{
         res.status(200).json(dishes)
     }).catch((err) =>{
@@ -47,7 +52,7 @@ router.post('/:dishId',(req,res)=>{
     res.status(403).send('POST operation not supported on /dishes/'+ req.params.dishId);
 })
 
-router.delete('/:dishId',(req,res)=>{
+router.delete('/:dishId',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Dishes.findByIdAndRemove(req.params.dishId)
     .then((rsp)=>{
         res.status(200).json(rsp)
@@ -57,7 +62,7 @@ router.delete('/:dishId',(req,res)=>{
     })
 })
 
-router.put('/:dishId',(req,res)=>{
+router.put('/:dishId',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Dishes.findByIdAndUpdate(req.params.dishId,{$set: req.body},{new:true})
     .then((dish)=>{
         res.status(200).json(dish)
@@ -71,6 +76,7 @@ router.put('/:dishId',(req,res)=>{
 
 router.get('/:dishId/comments',(req,res)=>{
     Dishes.findById(req.params.dishId)
+    .populate('comments.author')
     .then((dishes) =>{
         if(!dishes){
             return res.status(404).json({msg:`Dish ${req.params.dishId} not found`})
@@ -81,23 +87,26 @@ router.get('/:dishId/comments',(req,res)=>{
     })
 })
 
-router.post('/:dishId/comments',(req,res)=>{
+router.post('/:dishId/comments',authenticate.verifyUser,(req,res)=>{
     Dishes.findById(req.params.dishId)
     .then((dishes) =>{
         if(!dishes){
             return res.status(404).json({msg:`Dish ${req.params.dishId} not found`})
         }
+        req.body.author = req.user._id;
         dishes.comments.push(req.body)
         dishes.save()
         .then((dish)=>{
-            res.status(200).json(dish)
+            Dishes.findById(dish)
+            .populate('comments.author')
+            .then((dishers) => { res.status(200).json(dishers)})
         },(err) => res.status(500).json({msg: 'Error',err}))
     }).catch((err) =>{
         res.status(500).json({msg: 'Error',err})
     })
 })
 
-router.delete('/:dishId/comments',(req,res)=>{
+router.delete('/:dishId/comments',authenticate.verifyUser,authenticate.isAdmin,(req,res)=>{
     Dishes.findById(req.params.dishId)
     .then((dish) =>{
         if(!dish){
@@ -121,8 +130,9 @@ router.put('/:dishId/comments',(req,res)=>{
 
 //comments ID
 
-router.get('/:dishId/comments/:commentId',(req,res)=>{
+router.get('/:dishId/comments/:commentId',authenticate.verifyUser,(req,res)=>{
     Dishes.findById(req.params.dishId)
+    .populate('comments.author')
     .then((dish) =>{
         if (dish != null && dish.comments.id(req.params.commentId) != null) {
             res.status(200).json(dish.comments.id(req.params.commentId));
@@ -142,15 +152,23 @@ router.post('/:dishId/comments/:commentId',(req,res)=>{
     res.status(403).send('POST operation not supported on /dishes/'+ req.params.dishId + '/comments/' + req.params.commentId);
 })
 
-router.delete('/:dishId/comments/:commentId',(req,res)=>{
+router.delete('/:dishId/comments/:commentId',authenticate.verifyUser,(req,res)=>{
     Dishes.findById(req.params.dishId)
     .then((dish) => {
         if (dish != null && dish.comments.id(req.params.commentId) != null) {
-            dish.comments.id(req.params.commentId).remove();
-            dish.save()
-            .then((dish) => {
-                res.status(200).json(dish)                
+            console.log(dish.comments.id(req.params.commentId).author,req.user._id)
+            if((dish.comments.id(req.params.commentId).author).toString() != (req.user._id).toString()){
+                return res.status(403).json({msg: 'This is not your comment'})
+            }
+            else{
+                dish.comments.id(req.params.commentId).remove();
+                dish.save()
+                .then((dish) => {
+                Dishes.findById(dish._id)
+                .populate('comments.author')
+                .then((dishers) => {res.status(200).json(dishers)})                
             }, (err) => res.status(500).json({msg: 'Error',err}));
+            }
         }
         else if (dish == null) {
             return res.status(404).json({msg:`Dish ${req.params.dishId} not found`})
@@ -165,20 +183,27 @@ router.delete('/:dishId/comments/:commentId',(req,res)=>{
     })
 })
 
-router.put('/:dishId/comments/:commentId',(req,res)=>{
-    Dishes.findByIdAndUpdate(req.params.dishId,{$set: req.body},{new:true})
+router.put('/:dishId/comments/:commentId',authenticate.verifyUser,(req,res)=>{
+    Dishes.findById(req.params.dishId)
     .then((dish)=>{
         if (dish != null && dish.comments.id(req.params.commentId) != null) {
-            if (req.body.rating) {
-                dish.comments.id(req.params.commentId).rating = req.body.rating;
+            if((dish.comments.id(req.params.commentId).author).toString() != (req.user._id).toString()){
+                return res.status(403).json({msg: 'This is not your comment'})
             }
-            if (req.body.comment) {
-                dish.comments.id(req.params.commentId).comment = req.body.comment;
+            else{
+                if (req.body.rating) {
+                    dish.comments.id(req.params.commentId).rating = req.body.rating;
+                }
+                if (req.body.comment) {
+                    dish.comments.id(req.params.commentId).comment = req.body.comment;
+                }
+                dish.save()
+                .then((dish) => {
+                    Dishes.findById(dish._id)
+                    .populate('comments.author')
+                    .then((dishers) => {res.status(200).json(dishers)})
+                }, (err) => res.status(500).json({msg: 'Error',err}));
             }
-            dish.save()
-            .then((dish) => {
-                res.status(200).json(dish)
-            }, (err) => res.status(500).json({msg: 'Error',err}));
         }
         else if (dish == null) {
             return res.status(404).json({msg:`Dish ${req.params.dishId} not found`})
